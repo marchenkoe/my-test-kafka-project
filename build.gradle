@@ -1,0 +1,106 @@
+import org.jooq.codegen.GenerationTool
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'org.jooq:jooq-codegen:3.12.4'
+        classpath 'mysql:mysql-connector-java:8.0.12'
+    }
+}
+
+
+plugins {
+    id 'org.springframework.boot' version '2.2.4.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+    id 'java'
+    id 'org.liquibase.gradle' version '2.0.2'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    liquibaseRuntime 'mysql:mysql-connector-java:8.0.12'
+    liquibaseRuntime 'org.liquibase:liquibase-core:3.8.1'
+    liquibaseRuntime 'org.liquibase:liquibase-groovy-dsl:2.0.1'
+    liquibaseRuntime 'ch.qos.logback:logback-core:1.2.3'
+    liquibaseRuntime 'ch.qos.logback:logback-classic:1.2.3'
+    liquibaseRuntime 'jakarta.xml.bind:jakarta.xml.bind-api:2.3.2'
+    implementation 'org.springframework.boot:spring-boot-starter-jooq'
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    compileOnly 'org.projectlombok:lombok'
+    compile "org.slf4j:slf4j-api:1.7.30"
+    compile "org.slf4j:jul-to-slf4j:1.7.30"
+    compile "org.slf4j:log4j-over-slf4j:1.7.30"
+    compile "mysql:mysql-connector-java:8.0.18"
+    compile "javax:javaee-api:7.0"
+    compile 'com.fasterxml.jackson.core:jackson-core:2.10.2'
+    compile 'com.fasterxml.jackson.core:jackson-annotations:2.10.2'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.10.2'
+    compile "org.springframework.boot:spring-boot-starter-jooq"
+    compile "org.jooq:jooq-codegen:3.11.4"
+    runtime 'com.sun.xml.bind:jaxb-core:2.3.0'
+    runtime 'com.sun.xml.bind:jaxb-impl:2.3.2'
+    runtime 'com.sun.xml.bind:jaxb-osgi:2.3.2'
+
+    annotationProcessor 'org.projectlombok:lombok'
+}
+
+liquibase {
+    activities {
+        main {
+            changeLogFile 'db/main.groovy'
+            url 'jdbc:mysql://localhost:3306/test'
+            username 'root'
+            password '11111'
+        }
+    }
+}
+
+task generateJooqSources {
+    doLast {
+        def writer = new StringWriter()
+        def xml = new groovy.xml.MarkupBuilder(writer)
+                .configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.11.4.xsd') {
+                    jdbc {
+                        driver('com.mysql.cj.jdbc.Driver')
+                        url('jdbc:mysql://localhost:3306/test')
+                        user('root')
+                        password('11111')
+                    }
+                    generator {
+                        database {
+                            name('org.jooq.meta.mysql.MySQLDatabase')
+                            includes('test.*')
+                            excludes('DATABASECHANGELOG | DATABASECHANGELOGLOCK')
+                        }
+                        generate {
+                            pojos false
+                            daos false
+                        }
+                        target {
+                            packageName('generated')
+                            directory('src/main/java')
+                        }
+                    }
+                }
+        GenerationTool.generate(writer.toString())
+    }
+}
