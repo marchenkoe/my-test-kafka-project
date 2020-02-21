@@ -13,6 +13,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.EMPTY_LIST;
@@ -28,12 +29,16 @@ public class KafkaConsumer {
     @KafkaListener(id = "Demo", topics = {"incomingTopic"}, containerFactory = "batchFactory")
     public void consume(List<IncomingMessage> records, Acknowledgment ack) {
         log.info("beginning to consume batch messages");
+        final AtomicInteger index = new AtomicInteger(0);
         try {
-            records.forEach(m -> save(getCorrectMessages(m)));
+            records.forEach(m -> {
+                save(getCorrectMessages(m));
+                index.addAndGet(1);
+            });
             ack.acknowledge();
             log.info("all batch messages consumed");
         } catch (DataAccessException ex) {
-            ack.nack(100500);
+            ack.nack(index.get(), 10000);
             log.error("Data access fail, rollback", ex);
         }
     }
